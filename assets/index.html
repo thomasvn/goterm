@@ -3,22 +3,22 @@
 <head>
 	<title>Xterm</title>
 	<link rel="stylesheet" href="/main.css" />
-	<link rel="stylesheet" href="/xterm.js/src/xterm.css" />
-	<link rel="stylesheet" href="/xterm.js/addons/fullscreen/fullscreen.css" />
+	<link rel="stylesheet" href="https://unpkg.com/xterm@4.19.0/css/xterm.css" />
+
+	<script src="https://unpkg.com/xterm@4.19.0/lib/xterm.js" ></script>
+  <script> var exports = {};</script>
+  <script src="https://unpkg.com/xterm-addon-fit@0.5.0/out/FitAddon.js"> </script>
 </head>
 <body>
 	<div id="xterm"></div>
 
-	<script src="/xterm.js/src/xterm.js" ></script>
-	<script src="/xterm.js/addons/fit/fit.js" ></script>
-	<script src="/xterm.js/addons/fullscreen/fullscreen.js" ></script>
 	<script>
 	var term;
 	var websocket = new WebSocket("ws://" + window.location.hostname + ":" + window.location.port + "/term");
 	websocket.binaryType = "arraybuffer";
 
 	function ab2str(buf) {
-		return String.fromCharCode.apply(null, new Uint8Array(buf));
+    return new Uint8Array(buf);
 	}
 
 	websocket.onopen = function(evt) {
@@ -26,25 +26,30 @@
 			screenKeys: true,
 			useStyle: true,
 			cursorBlink: true,
+      fontFamily: 'Courier New',
 		});
+    const fitAddon = new FitAddon();
+    term.loadAddon(fitAddon);
 
-		term.on('data', function(data) {
+		term.onData(function(data) {
 			websocket.send(new TextEncoder().encode("\x00" + data));
 		});
 
-		term.on('resize', function(evt) {
+		term.onResize(function(evt) {
+      console.log("resize", evt);
 			websocket.send(new TextEncoder().encode("\x01" + JSON.stringify({cols: evt.cols, rows: evt.rows})))
 		});
 
-		term.on('title', function(title) {
+		term.onTitleChange(function(title) {
 			document.title = title;
 		});
 
 		term.open(document.getElementById('xterm'));
-			term.fit();
-			websocket.onmessage = function(evt) {
+    fitAddon.fit();
+    websocket.onmessage = function(evt) {
 			if (evt.data instanceof ArrayBuffer) {
 				term.write(ab2str(evt.data));
+
 			} else {
 				alert(evt.data)
 			}
@@ -52,7 +57,6 @@
 
 		websocket.onclose = function(evt) {
 			term.write("Session terminated");
-			term.destroy();
 		}
 
 		websocket.onerror = function(evt) {
@@ -60,6 +64,10 @@
 				console.log(evt)
 			}
 		}
+
+    window.onresize = function() {
+      fitAddon.fit();
+    }
 	}
 	</script>
 </body>
