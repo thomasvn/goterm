@@ -11,10 +11,10 @@ import (
 	"syscall"
 	"unsafe"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/creack/pty"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
-	"github.com/creack/pty"
+	log "github.com/sirupsen/logrus"
 )
 
 type windowSize struct {

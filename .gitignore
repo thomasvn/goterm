@@ -1,1 +1,4 @@
 goterm
+go.mod
+go.sum
+xterm.js
