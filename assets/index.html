@@ -1,74 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<title>Xterm</title>
-	<link rel="stylesheet" href="/main.css" />
-	<link rel="stylesheet" href="https://unpkg.com/xterm@4.19.0/css/xterm.css" />
+    <title>Xterm</title>
+    <link rel="stylesheet" href="/main.css" />
 
-	<script src="https://unpkg.com/xterm@4.19.0/lib/xterm.js" ></script>
-  <script> var exports = {};</script>
-  <script src="https://unpkg.com/xterm-addon-fit@0.5.0/out/FitAddon.js"> </script>
+    <!-- Import Xterm -->
+    <link rel="stylesheet" href="https://unpkg.com/xterm@4.19.0/css/xterm.css" />
+    <script src="https://unpkg.com/xterm@4.19.0/lib/xterm.js"> </script>
+    <script> var exports = {}; </script>
+    <script src="https://unpkg.com/xterm-addon-fit@0.5.0/out/FitAddon.js"> </script>
 </head>
 <body>
-	<div id="xterm"></div>
+    <div id="xterm"></div>
 
-	<script>
-	var term;
-	var websocket = new WebSocket("ws://" + window.location.hostname + ":" + window.location.port + "/term");
-	websocket.binaryType = "arraybuffer";
+    <script>
+        var term;
+        var websocket = new WebSocket("ws://" + window.location.hostname + ":" + window.location.port + "/term");
+        websocket.binaryType = "arraybuffer";
 
-	function ab2str(buf) {
-    return new Uint8Array(buf);
-	}
+        function ab2str(buf) {
+            return new Uint8Array(buf);
+        }
 
-	websocket.onopen = function(evt) {
-		term = new Terminal({
-			screenKeys: true,
-			useStyle: true,
-			cursorBlink: true,
-      fontFamily: 'Courier New',
-		});
-    const fitAddon = new FitAddon();
-    term.loadAddon(fitAddon);
+        websocket.onopen = function(evt) {
+            term = new Terminal({
+                screenKeys: true,
+                useStyle: true,
+                cursorBlink: true,
+                fontFamily: 'Courier New',
+            });
+            const fitAddon = new FitAddon();
+            term.loadAddon(fitAddon);
 
-		term.onData(function(data) {
-			websocket.send(new TextEncoder().encode("\x00" + data));
-		});
+            term.onData(function(data) {
+                websocket.send(new TextEncoder().encode("\x00" + data));
+            });
 
-		term.onResize(function(evt) {
-      console.log("resize", evt);
-			websocket.send(new TextEncoder().encode("\x01" + JSON.stringify({cols: evt.cols, rows: evt.rows})))
-		});
+            term.onResize(function(evt) {
+                console.log("resize", evt);
+                websocket.send(new TextEncoder().encode("\x01" + JSON.stringify({cols: evt.cols, rows: evt.rows})))
+            });
 
-		term.onTitleChange(function(title) {
-			document.title = title;
-		});
+            term.onTitleChange(function(title) {
+                document.title = title;
+            });
 
-		term.open(document.getElementById('xterm'));
-    fitAddon.fit();
-    websocket.onmessage = function(evt) {
-			if (evt.data instanceof ArrayBuffer) {
-				term.write(ab2str(evt.data));
+            term.open(document.getElementById('xterm'));
+                fitAddon.fit();
+                websocket.onmessage = function(evt) {
+                if (evt.data instanceof ArrayBuffer) {
+                    term.write(ab2str(evt.data));
 
-			} else {
-				alert(evt.data)
-			}
-		}
+                } else {
+                    alert(evt.data)
+                }
+            }
 
-		websocket.onclose = function(evt) {
-			term.write("Session terminated");
-		}
+            websocket.onclose = function(evt) {
+                term.write("Session terminated");
+            }
 
-		websocket.onerror = function(evt) {
-			if (typeof console.log == "function") {
-				console.log(evt)
-			}
-		}
+            websocket.onerror = function(evt) {
+                if (typeof console.log == "function") {
+                    console.log(evt)
+                }
+            }
 
-    window.onresize = function() {
-      fitAddon.fit();
-    }
-	}
-	</script>
+            window.onresize = function() {
+                fitAddon.fit();
+            }
+        }
+    </script>
 </body>
 </html>

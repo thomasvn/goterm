@@ -24,11 +24,13 @@ type windowSize struct {
 	Y    uint16
 }
 
+// This object later used to upgrade an HTTP request to a websocket connection
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 }
 
+// A websocket handler that the frontend will connect to
 func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 	l := log.WithField("remoteaddr", r.RemoteAddr)
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -37,7 +39,7 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cmd := exec.Command("/bin/bash", "-l")
+	cmd := exec.Command("/bin/zsh", "-l")
 	cmd.Env = append(os.Environ(), "TERM=xterm")
 
 	tty, err := pty.Start(cmd)
@@ -123,23 +125,27 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	var listen = flag.String("listen", "127.0.0.1:3000", "Host:port to listen on")
-	var assetsPath = flag.String("assets", "./assets", "Path to assets")
-
+	// Parse command line flags
+	listen := flag.String("listen", "127.0.0.1:3000", "Host:port to listen on")
+	assetsPath := flag.String("assets", "./assets", "Path to assets")
 	flag.Parse()
 
+	// A request router & dispatcher for matching incoming requests to their respective handler
+	// Routes are tested in the order they were added to the router. If two routes match, the first one wins. Therefore PathPrefix("/") must go last.
+	// Path "/" serves HTML, CSS, and Xterm
+	// Path "/term" serves a Websocket Handler that the frontend will connect to
 	r := mux.NewRouter()
-
 	r.HandleFunc("/term", handleWebsocket)
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir(*assetsPath)))
 
-	log.Info("Demo Websocket/Xterm terminal")
-	log.Warn("Warning, this is a completely insecure daemon that permits anyone to connect and control your computer, please don't run this anywhere")
-
+	// Warning messages
+	log.Info("Demo Websocket/Xterm Terminal. Listening on http://127.0.0.1:3000")
+	log.Warn("WARNING. This is a completely insecure daemon that permits anyone to connect and control your computer, please don't run this anywhere")
 	if !(strings.HasPrefix(*listen, "127.0.0.1") || strings.HasPrefix(*listen, "localhost")) {
 		log.Warn("Danger Will Robinson - This program has no security built in and should not be exposed beyond localhost, you've been warned")
 	}
 
+	// Start webserver
 	if err := http.ListenAndServe(*listen, r); err != nil {
 		log.WithError(err).Fatal("Something went wrong with the webserver")
 	}
